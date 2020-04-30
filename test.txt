@@ -1,66 +1,86 @@
-
 (*  Test *)
 print_string ("\n------------- Testing IsZero -------------\n");
 print_string (prettyPrinter_exp_ln (If(IsZero(Int(3)), True, False)));
 print_string "Result: ";	
 print_string (prettyPrinter_exp_ln (evaluator (If(IsZero(Int(3)), True, False))));
-print_string (prettyPrinter_typ_ln (type_checker evaluator (Add(Int(2), Int(3)))));
+print_string "Type checker: ";	
+print_string (prettyPrinter_typ_ln (type_checker evaluator (If(IsZero(Int(3)), True, False))));
+
+print_string("\n");
+print_string (prettyPrinter_exp_ln (If(IsZero(Int(0)), True, False)));
 print_string "Result: ";	
 print_string (prettyPrinter_exp_ln (evaluator (If(IsZero(Int(0)), True, False))));
+print_string "Type checker: ";	
+print_string (prettyPrinter_typ_ln (type_checker evaluator (If(IsZero(Int(0)), True, False))));
 
 print_string ("\n------------- Testing Addition -------------\n");
 print_string (prettyPrinter_exp_ln (Add(Int(2), Int(3))));
 print_string "Result: ";	
 print_string (prettyPrinter_exp_ln (evaluator (Add(Int(2), Int(3)))));
+print_string "Type checker: ";	
+print_string (prettyPrinter_typ_ln (type_checker evaluator (Add(Int(2), Int(3)))));
 
+print_string("\n");
 print_string (prettyPrinter_exp_ln (AddFloat(Float(7.0), Float(3.5))));
 print_string "Result: ";	
 print_string (prettyPrinter_exp_ln (evaluator (AddFloat(Float(7.0), Float(3.5)))));
+print_string "Type checker: ";	
+print_string (prettyPrinter_typ_ln (type_checker evaluator (AddFloat(Float(7.0), Float(3.5)))));
 
+(* print_string("\n");
 print_string (prettyPrinter_exp_ln (Add(Float(7.0), Int(5))));
 print_string "Result: ";	
 print_string (prettyPrinter_exp_ln (evaluator (Add(Int(7), Int(5)))));
+print_string "Type checker: ";	 *)
+(* print_string (prettyPrinter_typ_ln (type_checker evaluator (Add(Int(7), Int(5)))))); *)
 
 print_string ("\n------------- Testing Multiplication -------------\n");
 print_string (prettyPrinter_exp_ln (Mult(Int(45), Int(3))));
 print_string "Result: ";	
 print_string (prettyPrinter_exp_ln (evaluator (Mult(Int(45), Int(3)))));
+print_string "Type checker: ";	
+print_string (prettyPrinter_typ_ln (type_checker evaluator (Mult(Int(45), Int(3)))));
 
+print_string("\n");
 print_string (prettyPrinter_exp_ln (MultFloat(Float(7.0), Float(3.5))));
 print_string "Result: ";	
 print_string (prettyPrinter_exp_ln (evaluator (MultFloat(Float(7.0), Float(3.5)))));
+print_string "Type checker: ";	
+print_string (prettyPrinter_typ_ln (type_checker evaluator (MultFloat(Float(7.0), Float(3.5)))));
 
 print_string ("\n------------- Testing Pair, Fst and Snd -------------\n");
 print_string (prettyPrinter_exp_ln (Fst(Pair(Int(10), Int(8)))));
 print_string "Result: ";	
 print_string (prettyPrinter_exp_ln (evaluator (Fst(Pair(Int(10), Int(8))))));
+print_string "Type checker: ";	
+print_string (prettyPrinter_typ_ln (type_checker evaluator (Fst(Pair(Int(10), Int(8))))));
 
+print_string("\n");
 print_string (prettyPrinter_exp_ln (Snd(Pair(Int(100), Int(48)))));
 print_string "Result: ";	
 print_string (prettyPrinter_exp_ln (evaluator (Snd(Pair(Int(100), Int(48))))));
+print_string "Type checker: ";	
+print_string (prettyPrinter_typ_ln (type_checker evaluator (Snd(Pair(Int(100), Int(48))))));
 
 print_string ("\n------------- Testing Lambda -------------\n");
 
 print_string (prettyPrinter_exp_ln (If(True, Lambda("x", Bool , Var("x")), Lambda("z", Bool , App(Var("z"),Var("z"))))));
 print_string "Result: ";
-print_string (prettyPrinter_exp_ln (evaluator (If(True, Lambda("x", Bool , Var("x")), Lambda("z", Bool , App(Var("z"),Var("z")))))));
+print_string (prettyPrinter_exp_ln (evaluator (If(True, Lambda("x", Bool , Var("x")), Lambda("z", Bool , App(Var("z"),Var("z")))))));	
+print_string ("\n");
 print_string (prettyPrinter_exp_ln (If(True, (App(Lambda("x", Bool , Var("x")), True)), False)));
 print_string "Result: ";
 print_string (prettyPrinter_exp_ln (evaluator (If(True, (App(Lambda("x", Bool , Var("x")), True)), False))));
 
 print_string ("\n------------- Testing  -------------\n");
 
-(* print_string (prettyPrinter_exp_ln (If(IsZero(0), True, False)));
-print_string "Result: ";	 *)
-(* print_string (prettyPrinter_exp_ln (evaluator (If(IsZero(0), True, False)))); *)
-
 print_string (prettyPrinter_exp_ln (If(True, Add(Int(1), Int(2)), Int(3))));
 print_string "Result: ";	
 print_string (prettyPrinter_exp_ln (evaluator (If(True, Add(Int(1), Int(2)), Int(3)))));
 
 print_string (prettyPrinter_exp_ln (If(True, (App(Lambda("x", Bool , Var("x")), True)), False)));
-print_string "Result: \n";
+print_string "Result: ";
 print_string (prettyPrinter_exp_ln (evaluator (If(True, (App(Lambda("x", Bool , Var("x")), True)), False))));
 print_string (prettyPrinter_exp_ln (If(True, (App(Lambda("x", Bool , Var("x")), True)), False)));
-print_string "Result: \n";
+print_string "Result: ";
 print_string (prettyPrinter_exp_ln (evaluator (If(True, (App(Lambda("x", Bool , Var("x")), True)), False))));

@@ -112,7 +112,6 @@ let rec type_checker gamma e =
 	| If(e1, e2, e3) -> if(type_checker gamma e1 = Bool && (type_checker gamma e2 = type_checker gamma e3)) then Bool else raise(Failure "If-then-else: not a compatible type")
 	| Fst(e) -> type_checker gamma e
 	| Snd(e) -> type_checker gamma e
-	| Lambda(v, e2, e3) -> raise(Failure "Lambda: not a compatible type")
 	| otherwise -> raise(Failure "Type_checker: match not found")
 
 let rec myiterator v clauses =
@@ -184,7 +183,7 @@ let rec prettyPrinter_exp (exp : expression) =
 	| Lambda(varname, typ, exp') -> "Lambda " ^ varname ^ " : " ^ prettyPrinter_typ typ ^ "." ^ prettyPrinter_exp exp' 
 	| App(exp1, exp2) -> "(" ^ prettyPrinter_exp exp1 ^ "  " ^ prettyPrinter_exp exp2 ^ ")"
 	| If(exp1, exp2, exp3) -> "If " ^ prettyPrinter_exp exp1 ^ " then " ^ prettyPrinter_exp exp2 ^ " else " ^ prettyPrinter_exp exp3
-  | IsZero(exp1) -> "IsZero " ^ prettyPrinter_exp exp1
+	| IsZero(exp1) -> "IsZero " ^ prettyPrinter_exp exp1
 	| Add(v1, v2) -> "Add " ^ prettyPrinter_exp v1 ^ " + " ^ prettyPrinter_exp v2
 	| Mult(exp1, exp2) -> "Mult " ^ prettyPrinter_exp exp1 ^ " * " ^ prettyPrinter_exp exp2
 	| AddFloat(exp1, exp2) -> "Add " ^ prettyPrinter_exp exp1 ^ " +. " ^ prettyPrinter_exp exp2
@@ -268,9 +267,7 @@ print_string ("\n------------- Testing Lambda -------------\n");
 
 print_string (prettyPrinter_exp_ln (If(True, Lambda("x", Bool , Var("x")), Lambda("z", Bool , App(Var("z"),Var("z"))))));
 print_string "Result: ";
-print_string (prettyPrinter_exp_ln (evaluator (If(True, Lambda("x", Bool , Var("x")), Lambda("z", Bool , App(Var("z"),Var("z")))))));
-print_string "Type checker: ";	
-print_string (prettyPrinter_typ_ln (type_checker evaluator (If(True, Lambda("x", Bool , Var("x")), Lambda("z", Bool , App(Var("z"),Var("z")))))));
+print_string (prettyPrinter_exp_ln (evaluator (If(True, Lambda("x", Bool , Var("x")), Lambda("z", Bool , App(Var("z"),Var("z")))))));	
 print_string ("\n");
 print_string (prettyPrinter_exp_ln (If(True, (App(Lambda("x", Bool , Var("x")), True)), False)));
 print_string "Result: ";
@@ -278,17 +275,13 @@ print_string (prettyPrinter_exp_ln (evaluator (If(True, (App(Lambda("x", Bool , 
 
 print_string ("\n------------- Testing  -------------\n");
 
-(* print_string (prettyPrinter_exp_ln (If(IsZero(0), True, False)));
-print_string "Result: ";	 *)
-(* print_string (prettyPrinter_exp_ln (evaluator (If(IsZero(0), True, False)))); *)
-
 print_string (prettyPrinter_exp_ln (If(True, Add(Int(1), Int(2)), Int(3))));
 print_string "Result: ";	
 print_string (prettyPrinter_exp_ln (evaluator (If(True, Add(Int(1), Int(2)), Int(3)))));
 
 print_string (prettyPrinter_exp_ln (If(True, (App(Lambda("x", Bool , Var("x")), True)), False)));
-print_string "Result: \n";
+print_string "Result: ";
 print_string (prettyPrinter_exp_ln (evaluator (If(True, (App(Lambda("x", Bool , Var("x")), True)), False))));
 print_string (prettyPrinter_exp_ln (If(True, (App(Lambda("x", Bool , Var("x")), True)), False)));
-print_string "Result: \n";
+print_string "Result: ";
 print_string (prettyPrinter_exp_ln (evaluator (If(True, (App(Lambda("x", Bool , Var("x")), True)), False))));
