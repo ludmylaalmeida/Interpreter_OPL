@@ -1,11 +1,5 @@
 open Batteries
 
-(*
-	Type T ::= Bool | T -> T
-	Expression e ::= true | false | x | lambda x:T.e | (e e) | if e e e 
-
-*)
-
 type typ = 
 | Bool
 | TypeInt
@@ -14,10 +8,12 @@ type typ =
 | TypePair
 
 type pattern = 
-	| TrueP
-	| FalseP
-	| VarP of string * typ
-	| PairP of pattern * pattern
+| TrueP
+| FalseP
+| VarP of string * typ
+| PairP of pattern * pattern
+
+type id = Ident of string
 
 type expression = 
 | True 
@@ -28,7 +24,7 @@ type expression =
 | Lambda of string * typ * expression 
 | App of expression * expression 
 | If of expression * expression * expression 
-| Match of expression * expression
+| Match of expression * (pattern * expression) list
 | Add of expression * expression
 | Mult of expression * expression
 | IsZero of expression
@@ -39,14 +35,20 @@ type expression =
 | MultFloat of expression * expression
 | Ref of expression
 | DeRef of expression
+| Id of string
 | Some of expression
 | None
+| Let of id * expression * expression
 | Error
 
-(* type label = *
+type label = Lab of string
 
 (* Memory  *)
-type memory = list (label * expression) *)
+type memory = (string * expression) list
+
+(* type store = Store.store
+
+module type STORE = *)
 
 (* let operators *)
 let ( let* ) o f =
@@ -79,6 +81,39 @@ let rec substitution e v x =
 	| DeRef(e) -> (substitution e v x)
 	| None -> None
 	| Some(v) -> Some(v) 
+	(* | Let(varname, e1, e2) -> if varname = x then e2 else e2 *)
+
+let rec subtyping t1 t2 =
+	match (t1, t2) with
+	| (Bool, Bool) -> true
+	| (TypeInt, TypeInt) -> true
+	| (TypeInt, TypeFloat) -> true
+	| (TypeFloat, TypeInt) -> true
+	| (Fun(typ1, typ2), Fun(typ3, typ4)) -> subtyping typ3 typ1 && subtyping typ2 typ4
+	(* | Let(_, _, _) -> true *)
+	| otherwise -> false
+
+let rec type_checker gamma e = 
+	match e with
+	(* Var(x) -> lookup gamma x *)
+	| True -> Bool
+	| False -> Bool
+	| Int(v) -> TypeInt
+	| Float(v) -> TypeFloat
+	| App(e1, e2) -> (match type_checker gamma e1 with | Fun(t1, t2) -> if subtyping (type_checker gamma e2) t1 then t1 else t2)
+	| Add(e1, e2) -> if (type_checker gamma e1 = TypeInt && type_checker gamma e2 = TypeInt) then TypeInt else raise(Failure "Add: Type  " )
+	| Mult(e1, e2) -> if (type_checker gamma e1 = TypeInt && type_checker gamma e2 = TypeInt) then TypeInt else raise(Failure " " )
+	| AddFloat(e1, e2) -> if (type_checker gamma e1 = TypeFloat && type_checker gamma e2 = TypeFloat) then TypeFloat else raise(Failure " " )
+	| MultFloat(e1, e2) -> if (type_checker gamma e1 = TypeFloat && type_checker gamma e2 = TypeFloat) then TypeFloat else raise(Failure " " )
+	| Pair(e1, e2) -> if (type_checker gamma e1 = TypePair && type_checker gamma e2 = TypePair) then TypePair else raise(Failure " " )
+	| otherwise -> raise(Failure "kjh")
+
+let rec myiterator v clauses =
+	match clauses with
+			| [] -> Error
+			(* | ((pattern, body)) :: restOfTheList -> match Match(v,pattern) with 
+																										| None -> myiterator v restOfTheList 
+																										| Some bindings -> eval(multiple_subst body bindings) *)
 
 let rec evaluator exp = 
 	match exp with 
@@ -95,7 +130,7 @@ let rec evaluator exp =
 																	let mysubt = substitution exp' v varname in 
 																	evaluator mysubt
 									| _ -> raise(Failure "App: first arg is not a function"))
-	(* | Fun(e1, e2) -> (match evaluator e1 with *)
+	(* | Fun(e1, e2) -> Fun(e1, e2) *)
 	| IsZero(e1) -> (match evaluator e1 with Int(v1) -> if v1 = 0 then True else False | _-> raise(Failure "IsZero: not the right type"))
 	| Add(e1, e2) -> (match (evaluator e1, evaluator e2) with | (Int(i1),Int(i2)) -> Int(i1 + i2) | _-> raise(Failure "Add: not the right type"))
 	| Add(e1, e2) -> (match evaluator e1 with Int(v1) -> (match evaluator e2 with Int(v2) -> Int(v1+v2)| _ -> raise(Failure "not an int")) | _ -> raise(Failure "not an int"))
@@ -105,55 +140,31 @@ let rec evaluator exp =
 	| Pair(e1, e2) -> (match (evaluator e1, evaluator e2) with | _ ->Pair(evaluator e1, evaluator e2))
 	| Fst(e) -> (match e with Pair(e1,e2) -> evaluator e1)
 	| Snd(e) -> (match e with Pair(e1,e2) -> evaluator e2)
+	| Match(e, clauses) -> myiterator( evaluator e) clauses
+	| Let(x, e1, e2) -> evaluator (substitution (evaluator e1) x e2)
 
-let rec myiterator v clauses =
-	match clauses with
-			| [] -> Error
-			(* | ((pattern, body)) :: restOfTheList -> match Match(v,pattern) with | None -> myiterator v restOfTheList | Some bindings -> evaluator (multiple_subst body bindings) *)
-
-(* let rec evaluator exp mem = 
-	match exp with 
-	| True -> (True, mem)
-	| False -> (False, mem)
-	| Int(v) -> (Int(v), mem)
-	| Float(v) -> (Float(v), mem)
-	| Lambda(varname, typ, exp') -> (Lambda(varname, typ, exp'), mem) *)
-	(* | Match(e, clauses) -> myiterator( evaluator e) clauses *)
-	(* | Ref(e) -> let (v, mem') = evaluator e mem in
-									mylist = getAllKeys mem'
-									n = getMax mylist 
-									Label(n+1), (mem' @ [Label (n+1), v])
-	| DeRef(e) -> let (v, mem') = evaluator e mem in
+let rec eval (e,s) = 
+	match e with 
+	| True -> (True, s)
+	| False -> (False, s)
+	| Int(v) -> (Int(v), s)
+	| Float(v) -> (Float(v), s)
+	| Lambda(varname, typ, exp') -> (Lambda(varname, typ, exp'), s)
+	(* | Ref(e) -> let (v, s) = eval(e, s) in
+							let c = Store.fresh() in 
+							(c, Store.modify(s, c, v))
+	| DeRef(e) -> let (v, mem') = eval e mem in
 									mylist = getAllKeys mem'
 									n = getMax mylist 
 									Label(n+1), (mem' @ [Label (n+1), v]) *)
-
-let rec subtyping t1 t2 =
-	match (t1, t2) with
-	| (Bool, Bool) -> true
-	| (TypeInt, TypeInt) -> true
-	| (TypeInt, TypeFloat) -> true
-	| (TypeFloat, TypeInt) -> true
-	| (Fun(typ1, typ2), Fun(typ3, typ4)) -> subtyping typ3 typ1 && subtyping typ2 typ4
-	| otherwise -> false
-
-let rec type_checker gamma exp = 
-	match exp with
-	| True -> Bool
-	| False -> Bool
-	| Int(v) -> TypeInt
-	| Float(v) -> TypeFloat
-	| App(e1, e2) -> (match type_checker gamma e1 with | Fun(t1, t2) -> if subtyping (type_checker gamma e2) t1 then t1 else t2)
-	| Add(e1, e2) -> if (type_checker gamma e1 = TypeInt && type_checker gamma e2 = TypeInt) then TypeInt else raise(Failure " " )
-	| Mult(e1, e2) -> if (type_checker gamma e1 = TypeInt && type_checker gamma e2 = TypeInt) then TypeInt else raise(Failure " " )
-	| AddFloat(e1, e2) -> if (type_checker gamma e1 = TypeFloat && type_checker gamma e2 = TypeFloat) then TypeFloat else raise(Failure " " )
-	| MultFloat(e1, e2) -> if (type_checker gamma e1 = TypeFloat && type_checker gamma e2 = TypeFloat) then TypeFloat else raise(Failure " " )
-	| otherwise -> raise(Failure "")
 
 let rec prettyPrinter_typ (t : typ) = 
 	match t with 
 	| Bool -> "Bool"
 	| Fun(t1,t2) -> prettyPrinter_typ t1 ^ " --> " ^ prettyPrinter_typ t2
+	| TypeInt -> "Int"
+  | TypeFloat -> "Float"
+	| otherwise -> raise(Failure "prettyPrinter_typ: Match not found")
 
 let rec prettyPrinter_exp (exp : expression) = 
 	match exp with 
@@ -177,6 +188,8 @@ let rec prettyPrinter_exp (exp : expression) =
 
 let prettyPrinter_exp_ln (exp : expression) = prettyPrinter_exp exp ^ "\n"
 
+let prettyPrinter_typ_ln (t : typ) = prettyPrinter_typ t ^ "\n"
+
 let main = 
 
 (*  Test *)
@@ -184,7 +197,7 @@ print_string ("\n------------- Testing IsZero -------------\n");
 print_string (prettyPrinter_exp_ln (If(IsZero(Int(3)), True, False)));
 print_string "Result: ";	
 print_string (prettyPrinter_exp_ln (evaluator (If(IsZero(Int(3)), True, False))));
-print_string (prettyPrinter_exp_ln (If(IsZero(Int(0)), True, False)));
+print_string (prettyPrinter_typ_ln (type_checker evaluator (Add(Int(2), Int(3)))));
 print_string "Result: ";	
 print_string (prettyPrinter_exp_ln (evaluator (If(IsZero(Int(0)), True, False))));
 
@@ -199,7 +212,7 @@ print_string (prettyPrinter_exp_ln (evaluator (AddFloat(Float(7.0), Float(3.5)))
 
 print_string (prettyPrinter_exp_ln (Add(Float(7.0), Int(5))));
 print_string "Result: ";	
-print_string (prettyPrinter_exp_ln (evaluator (Add(Float(7.0), Int(5)))));
+print_string (prettyPrinter_exp_ln (evaluator (Add(Int(7), Int(5)))));
 
 print_string ("\n------------- Testing Multiplication -------------\n");
 print_string (prettyPrinter_exp_ln (Mult(Int(45), Int(3))));
@@ -231,16 +244,16 @@ print_string (prettyPrinter_exp_ln (evaluator (If(True, (App(Lambda("x", Bool , 
 print_string ("\n------------- Testing  -------------\n");
 
 (* print_string (prettyPrinter_exp_ln (If(IsZero(0), True, False)));
-print_string "Result: ";	
-print_string (prettyPrinter_exp_ln (evaluator (If(IsZero(0), True, False)))); *)
+print_string "Result: ";	 *)
+(* print_string (prettyPrinter_exp_ln (evaluator (If(IsZero(0), True, False)))); *)
 
-(* print_string (prettyPrinter_exp_ln (If(True, Add(Int(1), Int(2)), Int(3))));
+print_string (prettyPrinter_exp_ln (If(True, Add(Int(1), Int(2)), Int(3))));
 print_string "Result: ";	
-print_string (prettyPrinter_exp_ln (evaluator (If(True, Add(Int(1), Int(2)), Int(3))))); *)
+print_string (prettyPrinter_exp_ln (evaluator (If(True, Add(Int(1), Int(2)), Int(3)))));
 
-(* print_string (prettyPrinter_exp_ln (If(True, (App(Lambda("x", Bool , Var("x")), True)), False)));
+print_string (prettyPrinter_exp_ln (If(True, (App(Lambda("x", Bool , Var("x")), True)), False)));
 print_string "Result: \n";
 print_string (prettyPrinter_exp_ln (evaluator (If(True, (App(Lambda("x", Bool , Var("x")), True)), False))));
 print_string (prettyPrinter_exp_ln (If(True, (App(Lambda("x", Bool , Var("x")), True)), False)));
 print_string "Result: \n";
-print_string (prettyPrinter_exp_ln (evaluator (If(True, (App(Lambda("x", Bool , Var("x")), True)), False)))); *)
+print_string (prettyPrinter_exp_ln (evaluator (If(True, (App(Lambda("x", Bool , Var("x")), True)), False))));
