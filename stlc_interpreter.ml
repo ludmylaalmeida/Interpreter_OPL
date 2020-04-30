@@ -6,6 +6,7 @@ type typ =
 | TypeFloat
 | Fun of typ * typ 
 | TypePair
+| TypeVar
 
 type pattern = 
 | TrueP
@@ -100,13 +101,19 @@ let rec type_checker gamma e =
 	| False -> Bool
 	| Int(v) -> TypeInt
 	| Float(v) -> TypeFloat
+	| Var(e) -> TypeVar
 	| App(e1, e2) -> (match type_checker gamma e1 with | Fun(t1, t2) -> if subtyping (type_checker gamma e2) t1 then t1 else t2)
-	| Add(e1, e2) -> if (type_checker gamma e1 = TypeInt && type_checker gamma e2 = TypeInt) then TypeInt else raise(Failure "Add: Type  " )
-	| Mult(e1, e2) -> if (type_checker gamma e1 = TypeInt && type_checker gamma e2 = TypeInt) then TypeInt else raise(Failure " " )
-	| AddFloat(e1, e2) -> if (type_checker gamma e1 = TypeFloat && type_checker gamma e2 = TypeFloat) then TypeFloat else raise(Failure " " )
-	| MultFloat(e1, e2) -> if (type_checker gamma e1 = TypeFloat && type_checker gamma e2 = TypeFloat) then TypeFloat else raise(Failure " " )
-	| Pair(e1, e2) -> if (type_checker gamma e1 = TypePair && type_checker gamma e2 = TypePair) then TypePair else raise(Failure " " )
-	| otherwise -> raise(Failure "kjh")
+	| Add(e1, e2) -> if (type_checker gamma e1 = TypeInt && type_checker gamma e2 = TypeInt) then TypeInt else raise(Failure "Add: not a compatible type")
+	| Mult(e1, e2) -> if (type_checker gamma e1 = TypeInt && type_checker gamma e2 = TypeInt) then TypeInt else raise(Failure "Mult: not a compatible type" )
+	| AddFloat(e1, e2) -> if (type_checker gamma e1 = TypeFloat && type_checker gamma e2 = TypeFloat) then TypeFloat else raise(Failure "AddFloat: not a compatible type" )
+	| MultFloat(e1, e2) -> if (type_checker gamma e1 = TypeFloat && type_checker gamma e2 = TypeFloat) then TypeFloat else raise(Failure "MultFloat: not a compatible type" )
+	| Pair(e1, e2) -> if (type_checker gamma e1 = type_checker gamma e2) then TypePair else raise(Failure "Pair: not a compatible type" )
+	| IsZero(e) -> if (type_checker gamma e = TypeInt) then Bool else raise(Failure "IsZero: not a compatibe type")
+	| If(e1, e2, e3) -> if(type_checker gamma e1 = Bool && (type_checker gamma e2 = type_checker gamma e3)) then Bool else raise(Failure "If-then-else: not a compatible type")
+	| Fst(e) -> type_checker gamma e
+	| Snd(e) -> type_checker gamma e
+	| Lambda(v, e2, e3) -> raise(Failure "Lambda: not a compatible type")
+	| otherwise -> raise(Failure "Type_checker: match not found")
 
 let rec myiterator v clauses =
 	match clauses with
@@ -141,7 +148,7 @@ let rec evaluator exp =
 	| Fst(e) -> (match e with Pair(e1,e2) -> evaluator e1)
 	| Snd(e) -> (match e with Pair(e1,e2) -> evaluator e2)
 	| Match(e, clauses) -> myiterator( evaluator e) clauses
-	| Let(x, e1, e2) -> evaluator (substitution (evaluator e1) x e2)
+	(* | Let(x, e1, e2) -> evaluator (substitution (evaluator e1) x e2) *)
 
 let rec eval (e,s) = 
 	match e with 
@@ -163,7 +170,8 @@ let rec prettyPrinter_typ (t : typ) =
 	| Bool -> "Bool"
 	| Fun(t1,t2) -> prettyPrinter_typ t1 ^ " --> " ^ prettyPrinter_typ t2
 	| TypeInt -> "Int"
-  | TypeFloat -> "Float"
+	| TypeFloat -> "Float"
+	| TypePair -> "Pair"
 	| otherwise -> raise(Failure "prettyPrinter_typ: Match not found")
 
 let rec prettyPrinter_exp (exp : expression) = 
@@ -197,46 +205,73 @@ print_string ("\n------------- Testing IsZero -------------\n");
 print_string (prettyPrinter_exp_ln (If(IsZero(Int(3)), True, False)));
 print_string "Result: ";	
 print_string (prettyPrinter_exp_ln (evaluator (If(IsZero(Int(3)), True, False))));
-print_string (prettyPrinter_typ_ln (type_checker evaluator (Add(Int(2), Int(3)))));
+print_string "Type checker: ";	
+print_string (prettyPrinter_typ_ln (type_checker evaluator (If(IsZero(Int(3)), True, False))));
+
+print_string("\n");
+print_string (prettyPrinter_exp_ln (If(IsZero(Int(0)), True, False)));
 print_string "Result: ";	
 print_string (prettyPrinter_exp_ln (evaluator (If(IsZero(Int(0)), True, False))));
+print_string "Type checker: ";	
+print_string (prettyPrinter_typ_ln (type_checker evaluator (If(IsZero(Int(0)), True, False))));
 
 print_string ("\n------------- Testing Addition -------------\n");
 print_string (prettyPrinter_exp_ln (Add(Int(2), Int(3))));
 print_string "Result: ";	
 print_string (prettyPrinter_exp_ln (evaluator (Add(Int(2), Int(3)))));
+print_string "Type checker: ";	
+print_string (prettyPrinter_typ_ln (type_checker evaluator (Add(Int(2), Int(3)))));
 
+print_string("\n");
 print_string (prettyPrinter_exp_ln (AddFloat(Float(7.0), Float(3.5))));
 print_string "Result: ";	
 print_string (prettyPrinter_exp_ln (evaluator (AddFloat(Float(7.0), Float(3.5)))));
+print_string "Type checker: ";	
+print_string (prettyPrinter_typ_ln (type_checker evaluator (AddFloat(Float(7.0), Float(3.5)))));
 
+(* print_string("\n");
 print_string (prettyPrinter_exp_ln (Add(Float(7.0), Int(5))));
 print_string "Result: ";	
 print_string (prettyPrinter_exp_ln (evaluator (Add(Int(7), Int(5)))));
+print_string "Type checker: ";	 *)
+(* print_string (prettyPrinter_typ_ln (type_checker evaluator (Add(Int(7), Int(5)))))); *)
 
 print_string ("\n------------- Testing Multiplication -------------\n");
 print_string (prettyPrinter_exp_ln (Mult(Int(45), Int(3))));
 print_string "Result: ";	
 print_string (prettyPrinter_exp_ln (evaluator (Mult(Int(45), Int(3)))));
+print_string "Type checker: ";	
+print_string (prettyPrinter_typ_ln (type_checker evaluator (Mult(Int(45), Int(3)))));
 
+print_string("\n");
 print_string (prettyPrinter_exp_ln (MultFloat(Float(7.0), Float(3.5))));
 print_string "Result: ";	
 print_string (prettyPrinter_exp_ln (evaluator (MultFloat(Float(7.0), Float(3.5)))));
+print_string "Type checker: ";	
+print_string (prettyPrinter_typ_ln (type_checker evaluator (MultFloat(Float(7.0), Float(3.5)))));
 
 print_string ("\n------------- Testing Pair, Fst and Snd -------------\n");
 print_string (prettyPrinter_exp_ln (Fst(Pair(Int(10), Int(8)))));
 print_string "Result: ";	
 print_string (prettyPrinter_exp_ln (evaluator (Fst(Pair(Int(10), Int(8))))));
+print_string "Type checker: ";	
+print_string (prettyPrinter_typ_ln (type_checker evaluator (Fst(Pair(Int(10), Int(8))))));
 
+print_string("\n");
 print_string (prettyPrinter_exp_ln (Snd(Pair(Int(100), Int(48)))));
 print_string "Result: ";	
 print_string (prettyPrinter_exp_ln (evaluator (Snd(Pair(Int(100), Int(48))))));
+print_string "Type checker: ";	
+print_string (prettyPrinter_typ_ln (type_checker evaluator (Snd(Pair(Int(100), Int(48))))));
 
 print_string ("\n------------- Testing Lambda -------------\n");
 
 print_string (prettyPrinter_exp_ln (If(True, Lambda("x", Bool , Var("x")), Lambda("z", Bool , App(Var("z"),Var("z"))))));
 print_string "Result: ";
 print_string (prettyPrinter_exp_ln (evaluator (If(True, Lambda("x", Bool , Var("x")), Lambda("z", Bool , App(Var("z"),Var("z")))))));
+print_string "Type checker: ";	
+print_string (prettyPrinter_typ_ln (type_checker evaluator (If(True, Lambda("x", Bool , Var("x")), Lambda("z", Bool , App(Var("z"),Var("z")))))));
+print_string ("\n");
 print_string (prettyPrinter_exp_ln (If(True, (App(Lambda("x", Bool , Var("x")), True)), False)));
 print_string "Result: ";
 print_string (prettyPrinter_exp_ln (evaluator (If(True, (App(Lambda("x", Bool , Var("x")), True)), False))));
