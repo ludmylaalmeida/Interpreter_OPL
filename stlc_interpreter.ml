@@ -118,8 +118,8 @@ let rec myiterator v clauses =
 	match clauses with
 			| [] -> Error
 			(* | ((pattern, body)) :: restOfTheList -> match Match(v,pattern) with 
-																										| None -> myiterator v restOfTheList 
-																										| Some bindings -> eval(multiple_subst body bindings) *)
+				 | None -> myiterator v restOfTheList 
+				 | Some bindings -> eval(multiple_subst body bindings) *)
 
 let rec evaluator exp = 
 	match exp with 
@@ -149,20 +149,21 @@ let rec evaluator exp =
 	| Match(e, clauses) -> myiterator( evaluator e) clauses
 	(* | Let(x, e1, e2) -> evaluator (substitution (evaluator e1) x e2) *)
 
-let rec eval (e,s) = 
+(* mem version *)
+let rec eval (e,mem) = 
 	match e with 
-	| True -> (True, s)
-	| False -> (False, s)
-	| Int(v) -> (Int(v), s)
-	| Float(v) -> (Float(v), s)
-	| Lambda(varname, typ, exp') -> (Lambda(varname, typ, exp'), s)
-	(* | Ref(e) -> let (v, s) = eval(e, s) in
-							let c = Store.fresh() in 
-							(c, Store.modify(s, c, v))
+	| True -> (True, mem)
+	| False -> (False, mem)
+	| Int(v) -> (Int(v), mem)
+	| Float(v) -> (Float(v), mem)
+	| Lambda(varname, typ, exp') -> (Lambda(varname, typ, exp'), mem)
+	(* | Ref(e) -> let (v, mem) = eval(e, mem) in 
+		let c = Store.fresh() in 
+		(c, Store.modify(mem, c, v))
 	| DeRef(e) -> let (v, mem') = eval e mem in
-									mylist = getAllKeys mem'
-									n = getMax mylist 
-									Label(n+1), (mem' @ [Label (n+1), v]) *)
+		mylist = getAllKeys mem'
+		n = getMax mylist 
+		Label(n+1), (mem' @ [Label (n+1), v]) *)
 
 let rec prettyPrinter_typ (t : typ) = 
 	match t with 
